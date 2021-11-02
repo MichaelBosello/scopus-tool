@@ -1,10 +1,22 @@
 from elsapy.elsclient import ElsClient
 from elsapy.elsprofile import ElsAuthor
 from elsapy.elssearch import ElsSearch
+
+from bs4 import BeautifulSoup
+import requests
+
 import numpy as np
 import json
 import os
 import datetime
+
+VALID_CATEGORIES = [
+    "Multidisciplinary",
+
+    "Artificial Intelligence", "Computational Theory and Mathematics", "Computer Graphics and Computer-Aided Design", "Computer Networks and Communications", "Computer Science Applications", "Computer Science (miscellaneous)", "Computer Vision and Pattern Recognition", "Hardware and Architecture", "Human-Computer Interaction", "Information Systems", "Signal Processing", "Software"
+
+    "Control and Systems Engineering", "Electrical and Electronic Engineering"
+]
 
 def h_index(citations):
     citations = np.array(citations)
@@ -32,7 +44,7 @@ auth_srch.execute(client)
 print("author search has", len(auth_srch.results), "results:")
 print('_________________________________________________')
 for i, result in enumerate(auth_srch.results):
-    affiliation = result["affiliation-current"]["affiliation-name"]
+    affiliation = result["affiliation-current"]["affiliation-name"] if 'affiliation-current' in result else None
     orcid = result['orcid'] if 'orcid' in result else 'No ORCID'
     total_doc = result['document-count']
     link = result['link'][3]['@href']
@@ -118,8 +130,43 @@ print('show paper details?')
 input_paper = input('Y/n ---> ')
 if input_paper == 'y' or input_paper == '' or input_paper == 'Y':
     for result in doc_srch.results:
-        print("{}\n cited by: {}, #authors: {}, Field-Weighted citation impact: {}\n".format(
-            result['dc:title'], result['citedby-count'], 0,0))
+        paper_id = result['dc:identifier'].split(':')[1]
+        auth_count_response = client.exec_request("https://api.elsevier.com/analytics/scival/publication/metrics?metricTypes=AuthorCount&publicationIds={}&byYear=false&includedDocs=AllPublicationTypes".format(paper_id))
+        auth_count = int(auth_count_response["results"][0]["metrics"][0]["value"]) if 'value' in auth_count_response["results"][0]["metrics"][0] else 0
+        fwci_response = client.exec_request("https://api.elsevier.com/analytics/scival/publication/metrics?metricTypes=FieldWeightedCitationImpact&publicationIds={}&byYear=false&includedDocs=AllPublicationTypes".format(paper_id))
+        fwci = int(fwci_response["results"][0]["metrics"][0]["value"]) if 'value' in fwci_response["results"][0]["metrics"][0] else 0
+
+        quartile = None
+        if 'Article' in result['subtypeDescription']:
+            scimago_search_page = requests.get("https://www.scimagojr.com/journalsearch.php?q={}".format(result["prism:publicationName"]))
+            parsed_search_page = BeautifulSoup(scimago_search_page.text, "html.parser")
+            links = parsed_search_page.find_all('a')
+            scimago_link = None
+            for link in links:
+                if result["prism:publicationName"] in link.text:
+                    scimago_link = link['href']
+                    break
+            if scimago_link is not None:
+                scimago_j_page = requests.get("https://www.scimagojr.com/" + scimago_link)
+                parsed_j_page = BeautifulSoup(scimago_j_page.text, "html.parser")
+                tables = parsed_j_page.find_all('table')
+                quartile_table = None
+                for table in tables:
+                    if 'Quartile' in table.text:
+                        quartile_table = table
+                        break
+                if quartile_table is not None:
+                    body = quartile_table.contents[1]
+                    for child in body.contents:
+                        if (len(child.text) > 6 and
+                            fwci_response["results"][0]["publication"]["publicationYear"] == int(child.text[-6:-2]) and
+                            child.text[:-6] in VALID_CATEGORIES):
+                                categoty_quartile = int(child.text[-1])
+                                if quartile is None or categoty_quartile < quartile:
+                                    quartile = categoty_quartile
+                                
+        print("{}\n cited by: {}, #authors: {}, Field-Weighted citation impact: {}, Quartile: {}\n".format(
+            result['dc:title'], result['citedby-count'], auth_count, fwci, quartile))
 
 
 
