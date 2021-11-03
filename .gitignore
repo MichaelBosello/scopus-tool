@@ -1,6 +1,7 @@
 config.json
 dump.json
-
+*.csv
+*.xlsx
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,macos,linux,windows
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,macos,linux,windows
