@@ -27,7 +27,6 @@ def h_index(citations):
     return h_idx
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-
 con_file = open(dir_path + "/config.json")
 config = json.load(con_file)
 con_file.close()
@@ -35,18 +34,27 @@ con_file.close()
 client = ElsClient(config['apikey'])
 client.inst_token = config['insttoken']
 
+auth_srch = None
+while auth_srch is None:
+    author_input = input('insert author (name surname) ---> ')
+    if ' ' in author_input:
+        name, surname = author_input.split(' ')
+    else:
+        print('insert name and surname')
+        continue
+    print('_________________________________________________')
+    auth_srch = ElsSearch('authfirst({}) AND authlast({})'.format(name, surname), 'author')
+    auth_srch.execute(client)
+    if 'error' in auth_srch.results[0]:
+        print('author not found, error: {}'.format(auth_srch.results[0]['error']))
+        auth_srch = None
 
-author_input = input('insert author (name surname) ---> ')
-name, surname = author_input.split(' ')
-print('_________________________________________________')
-auth_srch = ElsSearch('authfirst({}) AND authlast({})'.format(name, surname), 'author')
-auth_srch.execute(client)
 print("author search has", len(auth_srch.results), "results:")
 print('_________________________________________________')
 for i, result in enumerate(auth_srch.results):
     affiliation = result["affiliation-current"]["affiliation-name"] if 'affiliation-current' in result else None
-    orcid = result['orcid'] if 'orcid' in result else 'No ORCID'
-    total_doc = result['document-count']
+    orcid = result['orcid'] if 'orcid' in result else None
+    total_doc = result['document-count'] if 'document-count' in result else None
     link = result['link'][3]['@href']
     print("{} - affiliation: {}, ORCID: {}, total papers: {}".format(i, affiliation, orcid, total_doc))
     print("link: {}".format(link))
