@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import requests
 
 import numpy as np
+import pandas as pd
 import json
 import os
 import datetime
@@ -17,6 +18,9 @@ VALID_CATEGORIES = [
 
     "Control and Systems Engineering", "Electrical and Electronic Engineering"
 ]
+
+TO_EXCEL = True
+OUTPUT_DIR = "out/"
 
 def h_index(citations):
     citations = np.array(citations)
@@ -131,12 +135,41 @@ for result in doc_srch.results:
     total_citedby += int(result['citedby-count'])
     citations.append(int(result['citedby-count']))
 hindex = h_index(citations)
-print("Publications: {}, in Journal: {}, cited by: {}, hindex: {}".format(pub_num, journal_pub, total_citedby, hindex))
+print("publications: {}, in journal: {}, cited by: {}, hindex: {}".format(pub_num, journal_pub, total_citedby, hindex))
+
+row_list = []
+extension = 'xlsx' if TO_EXCEL else 'csv'
+file_name = '{}_{}_{}_{}.{}'.format(author.full_name.replace(' ', '_'), author_id, start+1, end-1, extension)
+if not os.path.isdir(OUTPUT_DIR):
+    os.mkdir(OUTPUT_DIR)
+if TO_EXCEL:
+    df_overview = pd.DataFrame([[pub_num, journal_pub, total_citedby, hindex]],
+                   columns=['publications', 'in_journal', 'cited_by', 'h_index'])
+else:
+    with open(OUTPUT_DIR + file_name, 'w') as f:
+        f.write("#publications: {}| in journal: {}| cited by: {}| hindex: {}\n"
+                .format(pub_num, journal_pub, total_citedby, hindex))
 print('#################################################')
 print('#################################################')
 print('show paper details?')
 input_paper = input('Y/n ---> ')
 if input_paper == 'y' or input_paper == '' or input_paper == 'Y':
+    ggs_url = "https://scie.lcc.uma.es:8443"
+    ggs_page = requests.get(ggs_url + "/gii-grin-scie-rating/ratingSearch.jsf")
+    parsed_ggs_page = BeautifulSoup(ggs_page.text, "html.parser")
+    links = parsed_ggs_page.find_all('a')
+    xlsx_link = None
+    for link in links:
+        if 'xlsx' in link['href']:
+            xlsx_link = ggs_url + link['href']
+            break
+    ggs_data = None
+    if xlsx_link is not None:
+        ggs_data = pd.read_excel(xlsx_link, skiprows=1)
+        ggs_data.columns = ggs_data.columns.str.replace(' ', '_')
+    else:
+        print('Cannot retreive xlsx url from GGS Conference Rating site')
+
     for result in doc_srch.results:
         paper_id = result['dc:identifier'].split(':')[1]
         auth_count_response = client.exec_request("https://api.elsevier.com/analytics/scival/publication/metrics?metricTypes=AuthorCount&publicationIds={}&byYear=false&includedDocs=AllPublicationTypes".format(paper_id))
@@ -186,9 +219,33 @@ if input_paper == 'y' or input_paper == '' or input_paper == 'Y':
                                 categoty_quartile = int(child.text[-1])
                                 if quartile is None or categoty_quartile < quartile:
                                     quartile = categoty_quartile
-                                
-        print("{}\n cited by: {}, #authors: {}, Field-Weighted citation impact: {}, Quartile: {}\n".format(
-            result['dc:title'], result['citedby-count'], auth_count, fwci, quartile))
+        ggs_rating = None
+        ggs_collected = None
+        #if ggs_data is not None and 'Conference' in result['subtypeDescription']:
+        #    conference_name = result['prism:publicationName'].upper()
+        #    for row in ggs_data.itertuples():
+        #        if row.Title in conference_name:
+        #            ggs_rating = row.GGS_Rating
+        #            ggs_collected = row.Collected_Classes
+        #            break
+
+        print("{}\n cited by: {}, #authors: {}, Field-Weighted citation impact: {}, Quartile: {}, GGS Rating: {}, GGS Collected: {}\n".format(
+            result['dc:title'],
+            result['citedby-count'],
+            auth_count, fwci,
+            quartile,
+            ggs_rating,
+            ggs_collected))
+        row_list.append([result['dc:title'], result['citedby-count'], auth_count, fwci, quartile, ggs_rating, ggs_collected])
+
+    df_papers = pd.DataFrame(row_list, 
+            columns=['title', 'cited_by', 'authors', 'fwci', 'quartile', 'ggs_rating', 'ggs_collected'])
+    if TO_EXCEL:
+        with pd.ExcelWriter(OUTPUT_DIR + file_name) as writer:  
+            df_overview.to_excel(writer, sheet_name='Overview')
+            df_papers.to_excel(writer, sheet_name='Papers details')
+    else:
+        df_papers.to_csv(OUTPUT_DIR + file_name, mode='a')
 
 
 
