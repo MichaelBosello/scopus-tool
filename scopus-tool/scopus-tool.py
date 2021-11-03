@@ -146,12 +146,12 @@ if input_paper == 'y' or input_paper == '' or input_paper == 'Y':
 
         quartile = None
         if 'Article' in result['subtypeDescription']:
-            scimago_search_page = requests.get("https://www.scimagojr.com/journalsearch.php?q={}".format(result["prism:publicationName"]))
+            scimago_search_page = requests.get("https://www.scimagojr.com/journalsearch.php?q={}".format(result["prism:issn"]))
             parsed_search_page = BeautifulSoup(scimago_search_page.text, "html.parser")
             links = parsed_search_page.find_all('a')
             scimago_link = None
             for link in links:
-                if result["prism:publicationName"] in link.text:
+                if 'journalsearch.php' in link['href']:
                     scimago_link = link['href']
                     break
             if scimago_link is not None:
