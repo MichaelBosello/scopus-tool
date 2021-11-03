@@ -4,9 +4,7 @@
 
 ### 1) Install requirements
 
-    pip install numpy
-    pip install elsapy
-    pip install beautifulsoup4
+    python3 -m pip install elsapy beautifulsoup4 numpy pandas openpyxl
 
 ### 2) Run
 
