@@ -173,9 +173,13 @@ if input_paper == 'y' or input_paper == '' or input_paper == 'Y':
     for result in doc_srch.results:
         paper_id = result['dc:identifier'].split(':')[1]
         auth_count_response = client.exec_request("https://api.elsevier.com/analytics/scival/publication/metrics?metricTypes=AuthorCount&publicationIds={}&byYear=false&includedDocs=AllPublicationTypes".format(paper_id))
-        auth_count = int(auth_count_response["results"][0]["metrics"][0]["value"]) if 'value' in auth_count_response["results"][0]["metrics"][0] else 0
+        auth_count = 0
+        if "results" in auth_count_response and len(auth_count_response["results"]) > 0 and "metrics" in auth_count_response["results"][0] and len(auth_count_response["results"][0]["metrics"]) > 0 and 'value' in auth_count_response["results"][0]["metrics"][0]:
+            auth_count = int(auth_count_response["results"][0]["metrics"][0]["value"])
         fwci_response = client.exec_request("https://api.elsevier.com/analytics/scival/publication/metrics?metricTypes=FieldWeightedCitationImpact&publicationIds={}&byYear=false&includedDocs=AllPublicationTypes".format(paper_id))
-        fwci = int(fwci_response["results"][0]["metrics"][0]["value"]) if 'value' in fwci_response["results"][0]["metrics"][0] else 0
+        fwci = 0
+        if "results" in fwci_response and len(fwci_response["results"]) > 0 and "metrics" in fwci_response["results"][0] and len(fwci_response["results"][0]["metrics"]) > 0 and 'value' in fwci_response["results"][0]["metrics"][0]:
+            fwci = float(fwci_response["results"][0]["metrics"][0]["value"])
 
         quartile = None
         if 'Article' in result['subtypeDescription']:
