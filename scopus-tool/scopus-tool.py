@@ -43,6 +43,8 @@ while auth_srch is None:
     author_input = input('insert author (name surname) ---> ')
     if ' ' in author_input:
         name, surname = author_input.split(' ')
+        name.replace("-", " ")
+        name.replace("_", " ")
     else:
         print('insert name and surname')
         continue
