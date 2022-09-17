@@ -206,27 +206,28 @@ if input_paper == 'y' or input_paper == '' or input_paper == 'Y':
                         break
                 if quartile_table is not None:
                     body = quartile_table.contents[1]
-                    year = fwci_response["results"][0]["publication"]["publicationYear"]
-                    min_year = 3000
-                    max_year = 0
-                    for child in body.contents:
-                        if (len(child.text) > 6 and child.text[:-6] in VALID_CATEGORIES):
-                            text_year = int(child.text[-6:-2])
-                            if text_year > max_year:
-                                max_year = text_year
-                            if text_year < min_year:
-                                min_year = text_year
-                    if year < min_year:
-                        year = min_year
-                    if year > max_year:
-                        year = max_year
-                    for child in body.contents:
-                        if (len(child.text) > 6 and
-                            year == int(child.text[-6:-2]) and
-                            child.text[:-6] in VALID_CATEGORIES):
-                                categoty_quartile = int(child.text[-1])
-                                if quartile is None or categoty_quartile < quartile:
-                                    quartile = categoty_quartile
+                    if len(fwci_response["results"]) > 0:
+                        year = fwci_response["results"][0]["publication"]["publicationYear"]
+                        min_year = 3000
+                        max_year = 0
+                        for child in body.contents:
+                            if (len(child.text) > 6 and child.text[:-6] in VALID_CATEGORIES):
+                                text_year = int(child.text[-6:-2])
+                                if text_year > max_year:
+                                    max_year = text_year
+                                if text_year < min_year:
+                                    min_year = text_year
+                        if year < min_year:
+                            year = min_year
+                        if year > max_year:
+                            year = max_year
+                        for child in body.contents:
+                            if (len(child.text) > 6 and
+                                year == int(child.text[-6:-2]) and
+                                child.text[:-6] in VALID_CATEGORIES):
+                                    categoty_quartile = int(child.text[-1])
+                                    if quartile is None or categoty_quartile < quartile:
+                                        quartile = categoty_quartile
         ggs_rating = None
         ggs_collected = None
         if ggs_data is not None and 'Conference' in result['subtypeDescription']:
