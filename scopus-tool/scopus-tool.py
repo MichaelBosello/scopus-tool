@@ -229,12 +229,13 @@ if input_paper == 'y' or input_paper == '' or input_paper == 'Y':
         ggs_rating = None
         ggs_collected = None
         if ggs_data is not None and 'Conference' in result['subtypeDescription']:
-            conference_name = result['prism:publicationName'].upper()
-            for row in ggs_data.itertuples():
-                if row.Title in conference_name:
-                    ggs_rating = row.GGS_Rating
-                    ggs_collected = row.Collected_Classes
-                    break
+            if 'prism:publicationName' in result:
+                conference_name = result['prism:publicationName'].upper()
+                for row in ggs_data.itertuples():
+                    if row.Title in conference_name:
+                        ggs_rating = row.GGS_Rating
+                        ggs_collected = row.Collected_Classes
+                        break
 
         print("{}\n cited by: {}, #authors: {}, Field-Weighted citation impact: {}, Quartile: {}, GGS Rating: {}, GGS Collected: {}\n".format(
             result['dc:title'],
