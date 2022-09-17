@@ -174,6 +174,7 @@ if input_paper == 'y' or input_paper == '' or input_paper == 'Y':
 
     for result in doc_srch.results:
         paper_id = result['dc:identifier'].split(':')[1]
+        pub_name = result['prism:publicationName'] if 'prism:publicationName' in result else ""
         auth_count_response = client.exec_request("https://api.elsevier.com/analytics/scival/publication/metrics?metricTypes=AuthorCount&publicationIds={}&byYear=false&includedDocs=AllPublicationTypes".format(paper_id))
         auth_count = 0
         if "results" in auth_count_response and len(auth_count_response["results"]) > 0 and "metrics" in auth_count_response["results"][0] and len(auth_count_response["results"][0]["metrics"]) > 0 and 'value' in auth_count_response["results"][0]["metrics"][0]:
@@ -237,17 +238,18 @@ if input_paper == 'y' or input_paper == '' or input_paper == 'Y':
                         ggs_collected = row.Collected_Classes
                         break
 
-        print("{}\n cited by: {}, #authors: {}, Field-Weighted citation impact: {}, Quartile: {}, GGS Rating: {}, GGS Collected: {}\n".format(
+        print("{}\n, Publication name: {},  cited by: {}, #authors: {}, Field-Weighted citation impact: {}, Quartile: {}, GGS Rating: {}, GGS Collected: {}\n".format(
             result['dc:title'],
+            pub_name,
             result['citedby-count'],
             auth_count, fwci,
             quartile,
             ggs_rating,
             ggs_collected))
-        row_list.append([result['dc:title'], result['citedby-count'], auth_count, fwci, quartile, ggs_rating, ggs_collected])
+        row_list.append([result['dc:title'], pub_name, result['citedby-count'], auth_count, fwci, quartile, ggs_rating, ggs_collected])
 
     df_papers = pd.DataFrame(row_list, 
-            columns=['title', 'cited_by', 'authors', 'fwci', 'quartile', 'ggs_rating', 'ggs_collected'])
+            columns=['title', 'publication name', 'cited_by', 'authors', 'fwci', 'quartile', 'ggs_rating', 'ggs_collected'])
     if TO_EXCEL:
         with pd.ExcelWriter(OUTPUT_DIR + file_name) as writer:  
             df_overview.to_excel(writer, sheet_name='Overview')
